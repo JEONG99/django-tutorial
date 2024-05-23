@@ -1,23 +1,9 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404, redirect, resolve_url
 from django.utils import timezone
 from ..models import Question, Answer
 from ..forms import AnswerForm
-from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-
-def index(request):
-    page = request.GET.get('page', '1')
-    question_list = Question.objects.order_by('-create_date')
-    paginator = Paginator(question_list, 10)
-    page_obj = paginator.get_page(page)
-    context = {'question_list': page_obj}
-    return render(request, 'pybo/question_list.html', context)
-
-def detail(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    context = {'question': question}
-    return render(request, 'pybo/question_detail.html', context)
 
 @login_required(login_url='common:login')
 def answer_create(request, question_id):
@@ -30,7 +16,7 @@ def answer_create(request, question_id):
             answer.question = question
             answer.create_date = timezone.now()
             answer.save()
-            return redirect('pybo:detail', question_id=question.id)
+            return redirect('{}#answer_{}'.format(resolve_url('pybo:detail', question_id=question.id), answer.id))
     else:
         form = AnswerForm()
     context = {'question': question, 'form': form}
@@ -48,7 +34,7 @@ def answer_modify(request, answer_id):
             answer = form.save(commit=False)
             answer.modify_date = timezone.now()
             answer.save()
-            return redirect('pybo:detail', question_id=answer.question.id)
+            return redirect('{}#answer_{}'.format(resolve_url('pybo:detail', question_id=answer.question.id), answer.id))
     else:
         form = AnswerForm(instance=answer)
     context = {'answer': answer, 'form': form}
@@ -70,4 +56,4 @@ def answer_vote(request, answer_id):
         messages.error(request, '본인이 작성한 글은 추천할 수 없습니다')
     else:
         answer.voter.add(request.user)
-    return redirect('pybo:detail', question_id=answer.question.id)
+    return redirect('{}#answer_{}'.format(resolve_url('pybo:detail', question_id=answer.question.id), answer.id))
